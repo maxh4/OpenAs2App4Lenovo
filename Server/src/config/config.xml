@@ -68,7 +68,7 @@
                         response_format="xml"/>
       <commandProcessor classname="org.openas2.cmd.processor.RestCommandProcessor"
                         enabled="true"
-                        baseuri="https://localhost:8443"
+                        baseuri="https://0.0.0.0:8443"
                         ssl_protocol="TLS"
                         ssl_keystore="%home%/ssl_certs.jks"
                         ssl_keystore_password="testas2"
