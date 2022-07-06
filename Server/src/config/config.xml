@@ -135,7 +135,7 @@
               jdbc_connect_string="jdbc:h2:$component.db_directory$/$component.db_name$"
               sql_escape_character="'"
               tcp_server_start="true"
-              tcp_server_port="9092"
+              tcp_server_port="8092"
               tcp_server_password="openas2"/>
       <module enabled="$properties.module.MDNFileModule.enabled$"
               classname="org.openas2.processor.storage.MDNFileModule"
