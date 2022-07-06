@@ -1,0 +1,26 @@
+version: '3.1'
+
+services:
+  openas2server:
+    image: openas2:latest
+    restart: always
+    container_name: openas2-server
+    hostname: openas2-server
+    ports:
+      - '4080:10080'
+      - '4081:10081'
+      - '4083:8443'
+    volumes:
+      - ./Server/src/config:/opt/openas2/config
+    #environment:
+
+  openas2webui:
+    image: openas2ui:latest
+    restart: always
+    depends_on:
+      - openas2server
+    container_name: openas2-webui
+    hostname: openas2-webui
+    ports:
+      - '8083:80'
+    #environment:
