@@ -8,3 +8,4 @@ RUN yarn run build
 
 FROM nginx
 COPY --from=web-builder /usr/src/webui/dist /usr/share/nginx/html
+EXPOSE 80
