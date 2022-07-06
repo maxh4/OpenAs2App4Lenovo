@@ -65,10 +65,10 @@
                         userid="userID"
                         password="pWd"
                         response_format="xml"/>
-      <commandProcessor classname="org.openas2.cmd.processor.RestCommandProcessor" 
+      <commandProcessor classname="org.openas2.cmd.processor.RestCommandProcessor"
                         enabled="$properties.restapi.command.processor.enabled$"
-                        baseuri="http://127.0.0.1:8080" 
-                        userid="userID" 
+                        baseuri="http://127.0.0.1:8080"
+                        userid="userID"
                         password="pWd" />
    </commandProcessors>
    <processor classname="org.openas2.processor.DefaultProcessor"
@@ -124,7 +124,7 @@
               jdbc_connect_string="jdbc:h2:$component.db_directory$/$component.db_name$"
               sql_escape_character="'"
               tcp_server_start="true"
-              tcp_server_port="9092"
+              tcp_server_port="8092"
               tcp_server_password="openas2"/>
       <module enabled="$properties.module.MDNFileModule.enabled$"
               classname="org.openas2.processor.storage.MDNFileModule"
