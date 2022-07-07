@@ -6,9 +6,9 @@
    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
        <text x="55" y="50" font-size="20" style="color:red">Open</text>
        <text x="5" y="95" font-size="55" font-weight="bolder">AS2</text>
-   </svg> 
-   
-    
+   </svg>
+
+
     <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
     <label for="inputUsername" class="sr-only">Username</label>
     <input v-model="username" type="text" id="inputUsername" class="form-control" placeholder="Username" required="" autofocus="">
@@ -37,7 +37,8 @@ export default {
     data: function() {return {
         username: '',
         password: '',
-        server: 'https://127.0.0.1:8443/api',
+        server: 'https://10.128.5.239:4083/api',
+        // server: 'https://127.0.0.1:8443/api',
         rememberme: false,
         loading: false,
         errormsg: '',
@@ -67,7 +68,7 @@ export default {
                 this.errormsg = error;
             })
             .finally(() => this.loading = false)
-            
+
         }
     }
 }
