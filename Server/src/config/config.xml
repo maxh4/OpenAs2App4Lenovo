@@ -13,7 +13,7 @@
                email.logger.enabled="false"
                console.command.processor.enabled="true"
                socket.command.processor.enabled="false"
-               restapi.command.processor.enabled="false"
+               restapi.command.processor.enabled="true"
                module.AS2SenderModule.enabled="true"
                module.MDNSenderModule.enabled="true"
                module.DbTrackingModule.enabled="true"
