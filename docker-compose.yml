@@ -10,6 +10,7 @@ services:
       - '4080:10080'
       - '4081:10081'
       - '4083:8443'
+      - '4444:10444'
     volumes:
       - ./Server/src/config:/opt/openas2/config
     #environment:
