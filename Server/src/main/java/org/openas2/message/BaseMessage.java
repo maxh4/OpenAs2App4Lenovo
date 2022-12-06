@@ -27,6 +27,7 @@ import java.util.Map;
 
 
 public abstract class BaseMessage implements Message {
+
     /**
      *
      */
@@ -40,12 +41,15 @@ public abstract class BaseMessage implements Message {
     private String compressionType = ICryptoHelper.COMPRESSION_NONE;
     private boolean rxdMsgWasSigned = false;
     private boolean rxdMsgWasEncrypted = false;
+    private boolean fileCleanupCompleted = false;
     private Map<String, Object> options = new HashMap<String, Object>();
     private String calculatedMIC = null;
     private String logMsg = null;
     private String status = MSG_STATUS_MSG_INIT;
     private Map<String, String> customOuterMimeHeaders = new HashMap<String, String>();
     private String payloadFilename = null;
+    private String senderX509Alias;
+    private String receiverX509Alias;
 
 
     public BaseMessage() {
@@ -54,6 +58,33 @@ public abstract class BaseMessage implements Message {
 
     public String getAppTitle() {
         return Properties.getProperty(Properties.APP_TITLE_PROP, "OpenAS2 Server");
+    }
+
+    public String getSenderX509Alias() {
+        return senderX509Alias;
+    }
+
+    public void setSenderX509Alias(String alias) {
+        senderX509Alias = alias;
+    }
+
+    public String getReceiverX509Alias() {
+        return receiverX509Alias;
+    }
+
+    public void setReceiverX509Alias(String alias) {
+        receiverX509Alias = alias;
+        
+    }
+
+    @Override
+    public boolean isFileCleanupCompleted() {
+        return fileCleanupCompleted;
+    }
+
+    @Override
+    public void setFileCleanupCompleted(boolean cleanupDone) {
+        fileCleanupCompleted = cleanupDone;
     }
 
     public Map<String, Object> getOptions() {
@@ -465,12 +496,15 @@ public abstract class BaseMessage implements Message {
         if (tmpFilename == null || tmpFilename.length() < 1) {
             return null;
         }
+        if (tmpFilename.indexOf("*") >= 0) {
+            LogFactory.getLog(BaseMessage.class.getSimpleName()).warn("The 'filename' in disposition contains an asterisk. Setting to null.");
+            return null;
+        }
         try {
           tmpFilename = IOUtil.getSafeFilename(tmpFilename);          
         } catch (OpenAS2Exception oae) {
-          ParseException pe = new ParseException("Unable to extract a usable filename");
-          pe.initCause(oae);
-          throw pe;
+            LogFactory.getLog(BaseMessage.class.getSimpleName()).warn("Unable to extract a usable filename from: " + tmpFilename);
+            return null;
         }
         return tmpFilename;
     }

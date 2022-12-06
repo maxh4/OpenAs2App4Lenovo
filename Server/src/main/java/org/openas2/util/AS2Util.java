@@ -22,10 +22,8 @@ import org.openas2.processor.resender.ResenderModule;
 import org.openas2.processor.sender.SenderModule;
 import org.openas2.processor.storage.StorageModule;
 
-import javax.mail.BodyPart;
 import javax.mail.Header;
 import javax.mail.MessagingException;
-import javax.mail.Multipart;
 import javax.mail.internet.ContentType;
 import javax.mail.internet.InternetHeaders;
 import javax.mail.internet.MimeBodyPart;
@@ -194,7 +192,7 @@ public class AS2Util {
                 new DispositionType(disposition).validate();
             } catch (DispositionException de) {
                 if (logger.isWarnEnabled()) {
-                    logger.warn("Disposition exception on MDN. Disposition: " + disposition + msg.getLogMsgID(), de);
+                    logger.warn("Disposition error detected in MDN. Received disposition: " + disposition + msg.getLogMsgID(), de);
                 }
                 // Something wrong detected so flag it for later use
                 dispositionHasWarning = true;
@@ -225,7 +223,7 @@ public class AS2Util {
         String returnMIC = msg.getMDN().getAttribute(AS2MessageMDN.MDNA_MIC);
         if (returnMIC == null || returnMIC.length() < 1) {
             if (dispositionHasWarning) {
-                // TODO: Think this should pribably throw error if MIC should have been returned
+                // TODO: Think this should probably throw error if MIC should have been returned
                 // but for now...
                 msg.setLogMsg("Returned MIC not found but disposition has warning so might be normal.");
                 logger.warn(msg);
@@ -462,7 +460,8 @@ public class AS2Util {
         }
 
         CertificateFactory cFx = session.getCertificateFactory();
-        X509Certificate senderCert = cFx.getCertificate(mdn, Partnership.PTYPE_RECEIVER);
+        String x509_alias = mdn.getPartnership().getAlias(Partnership.PTYPE_RECEIVER);
+        X509Certificate senderCert = cFx.getCertificate(x509_alias);
 
         msg.setStatus(Message.MSG_STATUS_MDN_PARSE);
         if (logger.isTraceEnabled()) {
@@ -590,10 +589,14 @@ public class AS2Util {
             }
         }
         msg.setAttribute(FileAttribute.MA_PENDINGINFO, pendinginfofile);
-        getMetaData(msg, iFile);
+        try {
+            getMetaData(msg, iFile);
+        } catch (EOFException e) {
+            throw new OpenAS2Exception("Could not parse pending info file. Appears to be invalid: " + iFile.getAbsolutePath(), e);
+        }
     }
 
-    public static void getMetaData(AS2Message msg, File inFile) throws OpenAS2Exception {
+    public static void getMetaData(AS2Message msg, File inFile) throws OpenAS2Exception, EOFException {
         Log logger = LogFactory.getLog(AS2Util.class.getSimpleName());
         ObjectInputStream pifois;
         try {
@@ -642,7 +645,12 @@ public class AS2Util {
 
     public static void cleanupFiles(Message msg, boolean isError) {
         Log logger = LogFactory.getLog(AS2Util.class.getSimpleName());
-
+        if (msg.isFileCleanupCompleted()) {
+            if (logger.isTraceEnabled()) {
+                logger.trace("File cleanup already called for " + msg.getMessageID());
+            }
+            return;
+        }
         String pendingInfoFileName = msg.getAttribute(FileAttribute.MA_PENDINGINFO);
         if (pendingInfoFileName != null) {
             File fPendingInfoFile = new File(pendingInfoFileName);
@@ -728,6 +736,7 @@ public class AS2Util {
                 logger.error(msg, e);
             }
         }
+        msg.setFileCleanupCompleted(true);
     }
 
     private static String removeAngleBrackets(String srcString) {

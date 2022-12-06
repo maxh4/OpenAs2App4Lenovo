@@ -10,7 +10,6 @@ set action=%4%
 rem Setup the Java Virtual Machine
 if not "%JAVA%" == "" goto :Check_JAVA_END
     if not "%JAVA_HOME%" == "" goto :TryJDKEnd
-        call :warn JAVA_HOME not set; results may vary
 :TryWOWJRE
     FOR /F "usebackq tokens=3*" %%A IN (`REG QUERY "HKLM\Software\WOW6432NODE\JavaSoft\Java Runtime Environment" /s /v CurrentVersion ^| find "CurrentVersion"`) DO (
        set JAVA_VERSION=%%A
@@ -46,12 +45,13 @@ if not "%JAVA%" == "" goto :Check_JAVA_END
        set JAVA_HOME=%%A %%B
     )
     if not exist "%JAVA_HOME%" (
-       call :warn Unable to retrieve JAVA_HOME from Registry
+       echo Unable to retrieve JAVA_HOME from Registry
+       EXIT /B 1
     )
 :TryJDKEnd
     if not exist "%JAVA_HOME%" (
-        call :warn JAVA_HOME is not valid: "%JAVA_HOME%"
-        goto END
+        echo JAVA_HOME is not valid: "%JAVA_HOME%"
+        EXIT /B 1
     )
     set JAVA=%JAVA_HOME%\bin\java
 :Check_JAVA_END
@@ -65,7 +65,7 @@ if "%action%" == "replace" (
     if errorlevel 1 (
     	echo 
         echo Failed to delete the certificate in the keystore for alias "%certAlias%". See errors above to correct the problem.
-        goto END
+        EXIT /B 1
     )
 )
 
@@ -74,21 +74,21 @@ if errorlevel 1 (
 	echo. 
     echo ***** Failed to import the certificate to the keystore. See errors above to correct the problem.
     echo       If the error shows the certifcate already eists then add the "replace" option to the command line.
-    goto END
+    EXIT /B 1
 )
 
 echo. 
 echo   Sucessfully Imported certificate from file "%srcFile%" using alias "%certAlias%" to: %tgtStore%
 echo. 
 
-goto :END
+goto END
 
 :Usage
   echo Import a public certificate to a PKCS12 key store.
   echo You must specify the source file, target key store file name and an alias for imported certificate.
   echo By default the script will attemopt to import the designated certificate.
   echo If you wish to replace an existing certificate then specify "replace" as a 4th argument to the script
-  echo usage: %x% <src certificate> <target keystore> <cert alias> [action]
+  echo usage: %~nx0 ^<src certificate^> ^<target keystore^> ^<cert alias^> [action]
   echo             WHERE
   echo                src certificate = name of the file containg the public key to be imported
   echo                target keystore = name of the target keystore file including .p12 extension
@@ -97,9 +97,8 @@ goto :END
   echo                          anything other than "replace" will be interpreted as "import"
 
   echo.
-  echo        eg. $0 partnera.cer as2_certs.p12 partnera
+  echo        eg. %~nx0 partnera.cer as2_certs.p12 partnera
   echo                 OR
-  echo        eg. $0 partnera.cer as2_certs.p12 partnera replace
-
-:warn
+  echo        eg. %~nx0 partnera.cer as2_certs.p12 partnera replace
+  EXIT /B 1
 :END

@@ -36,6 +36,8 @@ import javax.mail.MessagingException;
 import javax.mail.internet.InternetHeaders;
 import javax.mail.internet.MimeBodyPart;
 import javax.net.ssl.SSLHandshakeException;
+
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -342,9 +344,10 @@ public class AS2SenderModule extends HttpSenderModule implements HasSchedule {
                 addCustomOuterMimeHeaders(msg, dataBP);
             }
             calcAndStoreMic(msg, dataBP, (sign || encrypt));
-            X509Certificate senderCert = certFx.getCertificate(msg, Partnership.PTYPE_SENDER);
+            String x509_alias = msg.getPartnership().getAlias(Partnership.PTYPE_SENDER);
+            X509Certificate senderCert = certFx.getCertificate(x509_alias);
 
-            PrivateKey senderKey = certFx.getPrivateKey(msg, senderCert);
+            PrivateKey senderKey = certFx.getPrivateKey(x509_alias);
             String digest = partnership.getAttribute(Partnership.PA_SIGNATURE_ALGORITHM);
 
             if (logger.isDebugEnabled()) {
@@ -379,8 +382,8 @@ public class AS2SenderModule extends HttpSenderModule implements HasSchedule {
             // configured
             addCustomOuterMimeHeaders(msg, dataBP);
             String algorithm = partnership.getAttribute(Partnership.PA_ENCRYPTION_ALGORITHM);
-
-            X509Certificate receiverCert = certFx.getCertificate(msg, Partnership.PTYPE_RECEIVER);
+            String x509_alias = msg.getPartnership().getAlias(Partnership.PTYPE_RECEIVER);
+            X509Certificate receiverCert = certFx.getCertificate(x509_alias);
             dataBP = AS2Util.getCryptoHelper().encrypt(dataBP, receiverCert, algorithm, contentTxfrEncoding);
 
             // Asynch MDN 2007-03-12
@@ -641,12 +644,17 @@ public class AS2SenderModule extends HttpSenderModule implements HasSchedule {
             File inFile = new File(pendingDir + File.separator + files[i]);
             try {
                 AS2Message msg = new AS2Message();
-                AS2Util.getMetaData(msg, inFile);
-                AS2Util.cleanupFiles(msg, true);
                 String msgStr = "Pending information file detected that is past max wait time, Failure most likely due to not receiving MDN response in Async mode: " + inFile.getAbsolutePath();
+                try {
+                  AS2Util.getMetaData(msg, inFile);
+                } catch (EOFException e) {
+                    // the file is either corrupt or somehow invalid as we are trying to read stuff that just ain't there so change the default message
+                    msgStr = "Detected a stale pending info file that is not in a valid format: " + inFile.getAbsolutePath();
+                }
                 msg.setLogMsg(msgStr);
                 msg.setStatus(Message.MSG_STATUS_MSG_TERMINATED_IN_ERROR);
                 logger.error(msg, null);
+                AS2Util.cleanupFiles(msg, true);
                 // Log significant msg state
                 msg.setOption("STATE", Message.MSG_STATE_MDN_ASYNC_RECEIVE_FAIL);
                 msg.trackMsgState(getSession());

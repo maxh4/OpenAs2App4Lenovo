@@ -11,6 +11,7 @@ import org.openas2.logging.Logger;
 import org.openas2.params.CompositeParameters;
 import org.openas2.params.InvalidParameterException;
 import org.openas2.params.ParameterParser;
+import org.openas2.message.MessageFactory;
 import org.openas2.partner.PartnershipFactory;
 import org.openas2.processor.Processor;
 import org.openas2.processor.ProcessorModule;
@@ -47,6 +48,7 @@ public class XMLSession extends BaseSession {
     public static final String EL_CMDPROCESSOR = "commandProcessors";
     public static final String EL_PROCESSOR = "processor";
     public static final String EL_PARTNERSHIPS = "partnerships";
+    public static final String EL_MESSAGES = "messages";
     public static final String EL_COMMANDS = "commands";
     public static final String EL_LOGGERS = "loggers";
     public static final String EL_POLLER_CONFIG = "pollerConfigBase";
@@ -117,6 +119,8 @@ public class XMLSession extends BaseSession {
                 loadLoggers(rootNode);
             } else if (nodeName.equals(EL_POLLER_CONFIG)) {
                 loadBasePartnershipPollerConfig(rootNode);
+            } else if (nodeName.equals(EL_MESSAGES)) {
+                loadMessages(rootNode);
             } else if (nodeName.equals("#text")) {
                 // do nothing
             } else if (nodeName.equals("#comment")) {
@@ -142,9 +146,6 @@ public class XMLSession extends BaseSession {
         LOGGER.info("Loading properties...");
 
         Map<String, String> properties = XMLUtil.mapAttributes(propNode, false);
-        @SuppressWarnings({ "unchecked", "rawtypes" })
-        Map<String, String> sysProps = (Map)System.getProperties();
-        properties.putAll(sysProps);
         // Make key things accessible via static object for things that do not have
         // accesss to session object
         properties.put(Properties.APP_TITLE_PROP, getAppTitle());
@@ -187,12 +188,26 @@ public class XMLSession extends BaseSession {
         parser.setReturnParamStringForMissingParsers(true);
         for (Map.Entry<String, String> entry : properties.entrySet()) {
             String val = entry.getValue();
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Parsing property: " + entry.getKey() + " : " + val);
+            }
             String parsedVal = ParameterParser.parse(val, parser);
             // Parser will return empty string if there is an unmatched parser ID in the string
             if (parsedVal.length() > 0 && !val.equals(parsedVal)) {
                 String key = entry.getKey();
                 // Put the changed value into the Properties set
                 Properties.setProperty(key, parsedVal);
+            }
+        }
+        /* Put system properties in afterwards to avoid parsing embedded properties that may have 
+           a $ sign in the value but only if the key does not exist.
+        */
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        Map<String, String> sysProps = (Map)System.getProperties();
+        for (Map.Entry<String, String> entry : sysProps.entrySet()) {
+            String key = entry.getKey();
+            if (Properties.getProperty(key, null) == null) {
+                Properties.setProperty(key, entry.getValue());
             }
         }
     }
@@ -379,5 +394,11 @@ public class XMLSession extends BaseSession {
         }
         return TITLE;
 
+    }
+
+    private void loadMessages(Node rootNode) throws OpenAS2Exception {
+        LOGGER.info("Loading messages...");
+        MessageFactory messageFx = (MessageFactory) XMLUtil.getComponent(rootNode, this);
+        setComponent(MessageFactory.COMPID_MESSAGE_FACTORY, messageFx);
     }
 }

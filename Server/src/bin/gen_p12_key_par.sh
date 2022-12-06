@@ -1,6 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 
 x=`basename $0`
+
 if test $# -ne 4; then
   echo "Generate a certificate to a PKCS12 key store."
   echo "You must supply a target key store without the extension (extension will be added as .p12) and an alias for generated certificate."
@@ -21,6 +22,9 @@ if test $# -ne 4; then
   echo "     >$0 as2_certs partnera SHA256 \"CN=as2.partnerb.com, OU=QA, O=PartnerA, L=New York, S=New York, C=US\""
   echo "     Expected OUTPUT: as2_certs.p12 -  keystore containing both public and private key"
   echo "                     partnera.cer - public key certificate file ."
+  echo ""
+  echo "To run the script without prompts, set environment variables IS_AUTOMATED_EXEC=1 and KEYSTORE_PASSWORD to the desired password (can be blank)"
+  echo ""
   exit 1
 fi
 
@@ -41,34 +45,28 @@ if [ -n "$CERT_START_DATE" ]; then
 fi
 
 if [ -z $JAVA_HOME ]; then
-  OS=$(uname -s)
-
-  if [[ "${OS}" == *Darwin* ]]; then
-    # Mac OS X platform
-    JAVA_HOME=$(/usr/libexec/java_home)
-  elif [[ "${OS}" == *Linux* ]]; then
-    # Linux platform
-    JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
-  elif [[ "${OS}" == *MINGW* ]]; then
-    # Windows NT platform
-    echo "Windows not supported by this script"
-  fi
+  baseDir=`dirname $0`
+  . ${baseDir}/find_java
 fi
-
 if [ -z $JAVA_HOME ]; then
   echo "ERROR: Cannot find JAVA_HOME"
-  exit
-fi
-
-echo "Generate a certificate to a PKCS12 key store."
-echo "Generating certificate:  using alias $certAlias to ${tgtStore}.p12 $PRE_GEN_MSG_ADDITIONAL"
-read -p "Do you wish to execute this request? [Y/N]" Response
-if [  $Response != "Y" -a $Response != "y"  ] ; then
   exit 1
 fi
 
-read -p "Enter password for keystore:" ksPwd
-$JAVA_HOME/bin/keytool -genkeypair -alias $certAlias -validity $CertValidDays  -keyalg RSA -sigalg $sigAlg -keystore ${tgtStore}.p12 -storepass $ksPwd -storetype pkcs12 $AdditionalGenArgs -dname "$dName"
+echo "Using JAVA_HOME: ${JAVA_HOME}"
+if [ "1" != "$IS_AUTOMATED_EXEC" ]; then
+  echo "Generate a certificate to a PKCS12 key store."
+  echo "Generating certificate:  using alias $certAlias to ${tgtStore}.p12 $PRE_GEN_MSG_ADDITIONAL"
+  read -p "Do you wish to execute this request? [Y/N]" Response
+  if [  $Response != "Y" -a $Response != "y"  ] ; then
+    exit 1
+  fi
+  read -p "Enter password for keystore:" ksPwd
+else
+  ksPwd=$KEYSTORE_PASSWORD
+fi
+
+$JAVA_HOME/bin/keytool -genkeypair -alias $certAlias -validity $CertValidDays  -keyalg RSA -sigalg $sigAlg -keystore ${tgtStore}.p12 -storepass "$ksPwd" -storetype pkcs12 $AdditionalGenArgs -dname "$dName"
 if [ "$?" != 0 ]; then
 	echo ""
     echo "Failed to create a keystore. See errors above to correct the problem."
@@ -76,14 +74,14 @@ if [ "$?" != 0 ]; then
 fi
 
 #$JAVA_HOME/bin/keytool -selfcert -alias $certAlias -validity $CertValidDays  -sigalg $sigAlg -keystore ${tgtStore}.p12 -storepass $ksPwd -storetype pkcs12
-$JAVA_HOME/bin/keytool -selfcert -alias $certAlias $AdditionalGenArgs -validity $CertValidDays  -sigalg $sigAlg -keystore ${tgtStore}.p12 -storepass $ksPwd -storetype pkcs12
+$JAVA_HOME/bin/keytool -selfcert -alias $certAlias $AdditionalGenArgs -validity $CertValidDays  -sigalg $sigAlg -keystore ${tgtStore}.p12 -storepass "$ksPwd" -storetype pkcs12
 if [ "$?" != 0 ]; then
 	echo ""
     echo "Failed to self certifiy the certificates in the keystore. See errors above to correct the problem."
     exit 1
 fi
 
-$JAVA_HOME/bin/keytool -export -rfc -file $certAlias.cer -alias $certAlias  -keystore ${tgtStore}.p12 -storepass $ksPwd -storetype pkcs12
+$JAVA_HOME/bin/keytool -export -rfc -file $certAlias.cer -alias $certAlias  -keystore ${tgtStore}.p12 -storepass "$ksPwd" -storetype pkcs12
 if [ "$?" != 0 ]; then
 	echo ""
     echo "Failed to export the public key. See errors above to correct the problem."
