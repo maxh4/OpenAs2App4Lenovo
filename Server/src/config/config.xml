@@ -67,7 +67,7 @@
                         password="pWd"
                         response_format="xml"/>
       <commandProcessor classname="org.openas2.cmd.processor.RestCommandProcessor"
-                        enabled="$properties.restapi.command.processor.enabled$"
+                        enabled="true"
                         baseuri="https://0.0.0.0:8443"
                         ssl_protocol="TLS"
                         ssl_keystore="%home%/ssl_certs.jks"
